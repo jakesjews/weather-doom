@@ -32,6 +32,7 @@ for link, i in linkList
         .slice(4, -1)
     , (res) ->
       imageList.push(res)
+      console.log("read day #{i + 1} of #{linkList.length}")
     .run defer()
 
 await rimraf('scraped', defer())
@@ -86,6 +87,8 @@ for img, i in imageList
     """
 
     fs.appendFile('scraped/index.html', row, defer())
+
+  console.log("wrote day #{i + 1} of #{imageList.length}")
 
 htmlEnd = """
   </ul>
