@@ -21,8 +21,13 @@ run = co ->
   process.removeAllListeners('uncaughtException')
 
   imageList = []
+  # TODO: proper timeouts
+  blackList = [56]
 
   for link, i in linkList
+    if i in blackList
+      continue
+
     try
       nightmare = new Nightmare(loadImages: false)
       res = yield nightmare
@@ -37,10 +42,10 @@ run = co ->
             .backgroundImage
             .slice(4, -1)
 
-        imageList.push(res)
-        yield nightmare.end()
-        process.removeAllListeners('uncaughtException')
-        console.log("read day #{i + 1} of #{linkList.length}")
+      imageList.push(res)
+      yield nightmare.end()
+      process.removeAllListeners('uncaughtException')
+      console.log("read day #{i + 1} of #{linkList.length}")
     catch err
       console.error err
 
