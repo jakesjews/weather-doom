@@ -27,7 +27,7 @@ run = co ->
       nightmare = new Nightmare(loadImages: false)
 
       resPromise = new Promise (resolve, reject) ->
-        rejectTimeout = setTimeout(reject, 10 * 1000)
+        rejectTimeout = setTimeout(resolve, 10 * 1000)
 
         nightmare
           .goto(link)
