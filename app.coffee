@@ -18,27 +18,31 @@ run = co ->
       $('.pop li:first-child a').map(-> @href).toArray()
 
   yield nightmare.end()
+  process.removeAllListeners('uncaughtException')
 
   imageList = []
 
   for link, i in linkList
-    nightmare = new Nightmare(loadImages: false)
-    res = yield nightmare
-      .goto(link)
-      .wait('.dl-content-wrap h1')
-      .wait('#wx-local-wrap')
-      .evaluate ->
-        heading: document.querySelector('.dl-content-wrap h1').innerText
-        img: window
-          .getComputedStyle(
-            document.getElementById('wx-local-wrap'), false
-          )
-          .backgroundImage
-          .slice(4, -1)
+    try
+      nightmare = new Nightmare(loadImages: false)
+      res = yield nightmare
+        .goto(link)
+        .wait('#wx-local-wrap')
+        .evaluate ->
+          heading: document.querySelector('.dl-content-wrap h1').innerText
+          img: window
+            .getComputedStyle(
+              document.getElementById('wx-local-wrap'), false
+            )
+            .backgroundImage
+            .slice(4, -1)
 
-      imageList.push(res)
-      yield nightmare.end()
-      console.log("read day #{i + 1} of #{linkList.length}")
+        imageList.push(res)
+        yield nightmare.end()
+        process.removeAllListeners('uncaughtException')
+        console.log("read day #{i + 1} of #{linkList.length}")
+    catch err
+      console.error err
 
   yield rimraf('scraped')
   yield mkdirp.mkdirpAsync('scraped/images')
