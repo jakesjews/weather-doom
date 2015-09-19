@@ -25,7 +25,6 @@ run = co ->
     nightmare = new Nightmare(loadImages: false)
     res = yield nightmare
       .goto(link)
-      .inject('js', 'scripts/jquery.min.js')
       .wait('.dl-content-wrap h1')
       .wait('#wx-local-wrap')
       .evaluate ->
