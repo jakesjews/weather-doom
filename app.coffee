@@ -21,27 +21,30 @@ run = co ->
   process.removeAllListeners('uncaughtException')
 
   imageList = []
-  # TODO: proper timeouts
-  blackList = [56]
 
   for link, i in linkList
-    if i in blackList
-      continue
-
     try
       nightmare = new Nightmare(loadImages: false)
-      res = yield nightmare
-        .goto(link)
-        .wait('#wx-local-wrap')
-        .evaluate ->
-          heading: document.querySelector('.dl-content-wrap h1').innerText
-          img: window
-            .getComputedStyle(
-              document.getElementById('wx-local-wrap'), false
-            )
-            .backgroundImage
-            .slice(4, -1)
 
+      resPromise = new Promise (resolve, reject) ->
+        rejectTimeout = setTimeout(reject, 10 * 1000)
+
+        nightmare
+          .goto(link)
+          .wait('#wx-local-wrap')
+          .evaluate ->
+            heading: document.querySelector('.dl-content-wrap h1').innerText
+            img: window
+              .getComputedStyle(
+                document.getElementById('wx-local-wrap'), false
+              )
+              .backgroundImage
+              .slice(4, -1)
+          .then (result) ->
+            clearTimeout(rejectTimeout)
+            resolve(result)
+
+      res = yield resPromise
       imageList.push(res)
       yield nightmare.end()
       process.removeAllListeners('uncaughtException')
