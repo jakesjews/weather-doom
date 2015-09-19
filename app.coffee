@@ -26,25 +26,17 @@ run = co ->
     try
       nightmare = new Nightmare(loadImages: false)
 
-      resPromise = new Promise (resolve, reject) ->
-        rejectTimeout = setTimeout(resolve, 10 * 1000)
+      res = yield nightmare
+        .goto(link)
+        .evaluate ->
+          heading: document.querySelector('.dl-content-wrap h1').innerText
+          img: window
+            .getComputedStyle(
+              document.getElementById('wx-local-wrap'), false
+            )
+            .backgroundImage
+            .slice(4, -1)
 
-        nightmare
-          .goto(link)
-          .wait('#wx-local-wrap')
-          .evaluate ->
-            heading: document.querySelector('.dl-content-wrap h1').innerText
-            img: window
-              .getComputedStyle(
-                document.getElementById('wx-local-wrap'), false
-              )
-              .backgroundImage
-              .slice(4, -1)
-          .then (result) ->
-            clearTimeout(rejectTimeout)
-            resolve(result)
-
-      res = yield resPromise
       imageList.push(res)
       yield nightmare.end()
       process.removeAllListeners('uncaughtException')
