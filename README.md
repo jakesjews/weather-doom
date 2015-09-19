@@ -1,6 +1,6 @@
 # weather-doom
 Web scraper to collect dramatic weather channel headlines
 
-Requires phantomjs and iced-coffee-script `npm install -g phantomjs iced-coffee-script`
+Requires coffee-script `npm install -g iced-coffee-script`
 
-run with `iced app.coffee`
+run with `coffee app.coffee`

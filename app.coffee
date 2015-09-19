@@ -1,83 +1,89 @@
+Promise   = require('bluebird')
 Nightmare = require('nightmare')
-fs        = require('fs')
-request   = require('request')
-mkdirp    = require('mkdirp')
-rimraf    = require('rimraf')
+fs        = Promise.promisifyAll(require('fs'))
+request   = Promise.promisifyAll(require('request'))
+mkdirp    = Promise.promisifyAll(require('mkdirp'))
+rimraf    = Promise.promisify(require('rimraf'))
+co        = Promise.coroutine
 
 baseUrl = "https://web.archive.org"
 linkList = []
 
-await new Nightmare(loadImages: false)
-  .goto("https://web.archive.org/web/*/weather.com")
-  .evaluate ->
-    $('.pop li:first-child a').map(-> @href).toArray()
-  , (res) ->
-    linkList = res
-  .run defer()
-
-imageList = []
-
-for link, i in linkList
-  await new Nightmare(loadImages: false)
-    .goto(link)
-    .wait('.dl-content-wrap h1')
-    .wait('#wx-local-wrap')
+run = co ->
+  nightmare = new Nightmare(loadImages: false)
+  linkList = yield nightmare
+    .goto("https://web.archive.org/web/*/weather.com")
+    .inject('js', 'scripts/jquery.min.js')
     .evaluate ->
-      heading: document.querySelector('.dl-content-wrap h1').innerText
-      img: window
-        .getComputedStyle(
-          document.getElementById('wx-local-wrap'), false
-        )
-        .backgroundImage
-        .slice(4, -1)
-    , (res) ->
+      $('.pop li:first-child a').map(-> @href).toArray()
+
+  yield nightmare.end()
+
+  imageList = []
+
+  for link, i in linkList
+    nightmare = new Nightmare(loadImages: false)
+    res = yield nightmare
+      .goto(link)
+      .inject('js', 'scripts/jquery.min.js')
+      .wait('.dl-content-wrap h1')
+      .wait('#wx-local-wrap')
+      .evaluate ->
+        heading: document.querySelector('.dl-content-wrap h1').innerText
+        img: window
+          .getComputedStyle(
+            document.getElementById('wx-local-wrap'), false
+          )
+          .backgroundImage
+          .slice(4, -1)
+
       imageList.push(res)
+      yield nightmare.end()
       console.log("read day #{i + 1} of #{linkList.length}")
-    .run defer()
 
-await rimraf('scraped', defer())
-await mkdirp('scraped/images', defer())
+  yield rimraf('scraped')
+  yield mkdirp.mkdirpAsync('scraped/images')
 
-html = """
-<!DOCTYPE html>
-<head>
-  <style>
-    .image {
-      position:relative;
-      float: left;
-    }
+  html = """
+  <!DOCTYPE html>
+  <head>
+    <style>
+      .image {
+        position:relative;
+        float: left;
+      }
 
-    img {
-      height: 400px;
-    }
+      img {
+        height: 400px;
+      }
 
-    .text {
-      left: 0;
-      position:absolute;
-      text-align:center;
-      top: 100px;
-      width: 100%;
-      color: #FF3300;
-    }
+      .text {
+        left: 0;
+        position:absolute;
+        text-align:center;
+        top: 100px;
+        width: 100%;
+        color: #FF3300;
+      }
 
-    ul {
-      list-style-type: none;
-    }
-  </style>
-</head>
-<body>
-  <ul>
-"""
+      ul {
+        list-style-type: none;
+      }
+    </style>
+  </head>
+  <body>
+    <ul>
+  """
 
-await fs.appendFile('scraped/index.html', html, defer())
+  yield fs.appendFileAsync('scraped/index.html', html)
 
-for img, i in imageList
-  imageFile = i + '.jpg'
+  for img, i in imageList
+    imageFile = i + '.jpg'
 
-  await
-    request(img.img)
-      .pipe(fs.createWriteStream("scraped/images/#{imageFile}"))
-      .on('finish', defer())
+    writeImage = new Promise (resolve, reject) ->
+      request(img.img)
+        .pipe(fs.createWriteStream("scraped/images/#{imageFile}"))
+        .on('finish', resolve)
 
     row = """
       <li class="image">
@@ -86,13 +92,18 @@ for img, i in imageList
       </li>
     """
 
-    fs.appendFile('scraped/index.html', row, defer())
+    writeIndex = fs.appendFileAsync('scraped/index.html', row)
+    yield writeImage
+    yield writeIndex
 
-  console.log("wrote day #{i + 1} of #{imageList.length}")
+    console.log("wrote day #{i + 1} of #{imageList.length}")
 
-htmlEnd = """
-  </ul>
-</body>
-"""
+  htmlEnd = """
+    </ul>
+  </body>
+  """
 
-await fs.appendFile('scraped/index.html', htmlEnd, defer())
+  yield fs.appendFileAsync('scraped/index.html', htmlEnd)
+  process.exit()
+
+run()
