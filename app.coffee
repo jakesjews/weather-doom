@@ -13,7 +13,6 @@ run = co ->
   nightmare = new Nightmare(loadImages: false)
   linkList = yield nightmare
     .goto("https://web.archive.org/web/*/weather.com")
-    .inject('js', 'scripts/jquery.min.js')
     .evaluate ->
       $('.pop li:first-child a').map(-> @href).toArray()
 
